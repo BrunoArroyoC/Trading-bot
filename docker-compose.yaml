@@ -1,0 +1,38 @@
+
+services:
+
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: rabitmmq_Jev
+      RABBITMQ_DEFAULT_PASS: tradingBotBr1$
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+
+
+  redis:
+    image: redis:latest
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+     - redis_tradingBot:/data
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: trading_jev
+      POSTGRES_PASSWORD: tradingBotBr1$
+      POSTGRES_DB: db_jev
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db_jev_bot:/var/lib/postgresql
+
+volumes:
+  db_jev_bot:
+  redis_tradingBot:
+  rabbit_data:
