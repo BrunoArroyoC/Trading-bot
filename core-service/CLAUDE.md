@@ -1,5 +1,8 @@
 # core-service
 
+https://docs.alpaca.markets/us/docs/getting-started
+https://alpacahq.github.io/alpaca-trade-api-js/
+
 Part of **Jev**, a 24/7 automated paper-trading platform (see `Jev Trading Platform — Mini SRS(1).md` and `Roadmap(1).md`).
 core-service is the only service that talks to the broker: it streams Alpaca market data, detects 1H candle closes,
 computes indicators, builds the `MarketSnapshot`, validates decisions against the risk rules and places orders.
@@ -20,7 +23,7 @@ a Bun-native one (e.g. `Bun.serve` instead of Express, `bun:test` instead of Vit
 ## Commands
 
 ```sh
-bun run dev          # bun --watch index.ts
+bun run dev          # bun --watch index.ts, piped through pino-pretty (dev only; see below)
 bun run start
 bun run typecheck    # tsc --noEmit (bun check also works)
 bun run lint         # eslint .
@@ -32,6 +35,7 @@ bunx drizzle-kit migrate    # apply migrations
 
 - Tests use **Vitest**, not `bun test`: import from `"vitest"`, never from `"bun:test"`.
 - Bun loads `.env` automatically; `.env` must stay in `.gitignore`.
+- Readable logs in development come only from the `| pino-pretty ...` pipe in the `dev` script; `src/logger.ts` always writes JSON. To remove: delete that pipe from `dev` and run `bun remove pino-pretty`.
 
 ## Stack (from SRS §6)
 

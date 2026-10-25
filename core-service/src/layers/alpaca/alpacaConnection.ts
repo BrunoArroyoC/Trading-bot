@@ -1,4 +1,4 @@
-import { Alpaca } from "@alpacahq/alpaca-trade-api";
+import { Alpaca, timeFrame, TimeFrameUnit } from "@alpacahq/alpaca-trade-api";
 import { logger } from "../../logger.ts";
 
 
@@ -8,6 +8,28 @@ export async function startConnectionAlpaca(alpaca: Alpaca) {
   return account;
 }
 
+
+
+const HISTORY_BARS = 512;
+const HOUR_MS = 60 * 60 * 1000;
+
+// Returns the last 512 closed 1H bars for one ticker, oldest first.
+export async function getTheLast512Bars1H(alpaca: Alpaca, ticker: string) {
+  // A bar's timestamp is the START of its hour, so the bar of the current hour is still open.
+  const currentHourStart = new Date();
+  currentHourStart.setUTCMinutes(0, 0, 0);
+
+  const bars = await alpaca.marketData.getCryptoBars({
+    loc: "us-1",
+    symbols: [ticker],
+    timeframe: timeFrame(1, TimeFrameUnit.Hour),
+    // A few extra hours in case Alpaca has an hour with no bar.
+    start: new Date(currentHourStart.getTime() - (HISTORY_BARS + 8) * HOUR_MS),
+  });
+
+  const closedBars = (bars[ticker] ?? []).filter((bar) => bar.timestamp < currentHourStart);
+  return closedBars.slice(-HISTORY_BARS);
+}
 
 
 /*
