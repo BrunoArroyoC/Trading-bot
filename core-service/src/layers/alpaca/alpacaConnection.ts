@@ -1,7 +1,16 @@
 import { Alpaca } from "@alpacahq/alpaca-trade-api";
+import { logger } from "../../logger.ts";
+
+
+export async function startConnectionAlpaca(alpaca: Alpaca) {
+  const account = await alpaca.trading.account.getAccount();
+  logger.info({ status: account.status, buyingPower: account.buyingPower }, "Alpaca account loaded");
+  return account;
+}
 
 
 
+/*
 type StreamBar = {
   symbol: string;
   open: number;
@@ -13,28 +22,10 @@ type StreamBar = {
   timestampRaw: string | undefined;
   vwap: number;
   tradeCount: number;
+
 }
 
-
-let groupCandles: StreamBar[] = [];
-
-const alpaca = new Alpaca({
-  keyId: process.env.APCA_API_KEY_ID,
-  secret: process.env.APCA_API_SECRET_KEY,
-  paper: true,
-});
-
-//Start Connection
-  const account = await alpaca.trading.account.getAccount();
-  console.log(account.status, account.buyingPower);
-
-
-//Connection stream with websocket
-const crypto = alpaca.marketData.cryptoStream({loc: "eu-1"});
-//crypto.onBar((bar) => groupCandles.push(bar) );
-crypto.onError((msg) => console.error("stream error:", msg));
-crypto.onConnect(() => crypto.subscribeForBars(["BTC/USD"]));
-crypto.connect();
+*/
 
 
 

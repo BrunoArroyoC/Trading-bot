@@ -1,113 +1,79 @@
-Default to using Bun instead of Node.js.
+# core-service
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun check` instead of `tsc --noEmit`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
+Part of **Jev**, a 24/7 automated paper-trading platform (see `Jev Trading Platform — Mini SRS(1).md` and `Roadmap(1).md`).
+core-service is the only service that talks to the broker: it streams Alpaca market data, detects 1H candle closes,
+computes indicators, builds the `MarketSnapshot`, validates decisions against the risk rules and places orders.
 
-## APIs
+## Source of truth
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+- **SRS** (`Jev Trading Platform — Mini SRS(1).md`): requirements (FR-01…FR-15 for core, NFR-01…NFR-16), architecture, tech stack.
+- **Roadmap** (`Roadmap(1).md`): phased tasks, each with a *Done when* check. Work on the current phase only; a phase's gate must pass before the next starts.
+- When a task maps to a roadmap item or requirement, reference its ID (e.g. "task 1.2", "FR-10").
+- If code and these documents disagree, point it out instead of silently picking one.
+
+## Runtime: Bun
+
+**Bun** is the runtime and package manager (`bun install`, `bun add`, `bun run <script>`, `bunx`); don't use node, npm, pnpm or `tsx`.
+The rest of the SRS stack still applies (Express 5, Vitest, Zod, Drizzle, …). Don't replace a library from the SRS with
+a Bun-native one (e.g. `Bun.serve` instead of Express, `bun:test` instead of Vitest) unless asked.
+
+## Commands
+
+```sh
+bun run dev          # bun --watch index.ts
+bun run start
+bun run typecheck    # tsc --noEmit (bun check also works)
+bun run lint         # eslint .
+bun run test         # Vitest in watch mode
+bun run test --run   # Vitest once (CI)
+bunx drizzle-kit generate   # create a migration from src/db/schema.ts
+bunx drizzle-kit migrate    # apply migrations
+```
+
+- Tests use **Vitest**, not `bun test`: import from `"vitest"`, never from `"bun:test"`.
+- Bun loads `.env` automatically; `.env` must stay in `.gitignore`.
+
+## Stack (from SRS §6)
+
+- TypeScript strict, ES modules, Express 5 (`helmet`, `cors`).
+- **Zod v4** for env vars (`src/env.ts`), request bodies/queries, queue messages and external responses. Derive types with `z.infer`.
+- **Drizzle ORM** + `drizzle-kit` with the Bun SQL driver (`drizzle-orm/bun-sql`); schema in `src/db/schema.ts`, migrations in `drizzle/`.
+- `@alpacahq/alpaca-trade-api` **v5** (the version Alpaca recommends; don't downgrade), paper environment, for market data WebSocket, REST history and orders.
+- `trading-signals` for indicators: RSI(14), MACD(12,26,9), EMA 20/50/200, Bollinger(20,2), ATR(14), volume average.
+- `amqplib` (RabbitMQ), `ioredis` (Redis), `cockatiel` (timeout/retry/circuit breaker), native `fetch`, `croner`, `pino` + `pino-http`.
+- Testing: Vitest, Supertest, Testcontainers, MSW (mock Alpaca and Kronos).
+
+## Project layout
+
+```
+index.ts                         entry point (Express app, pino-http request logs)
+src/logger.ts                    shared pino logger; use it instead of console.log
+src/db/schema.ts                 Drizzle tables
+src/layers/alpaca/               Alpaca client and streams
+src/layers/alpaca/model/         Zod schemas for Alpaca data (e.g. candleZod.ts)
+drizzle/                         generated migrations
+.test/                           all tests, as *.test.ts (e.g. .test/validationsModel/ for Zod schema tests)
+eslint.config.ts                 ESLint flat config (typescript-eslint)
+```
+
+Tests go in `.test/`, not next to the code. `.test/` is listed in `tsconfig.json`'s `include` because TypeScript skips dot-folders by default.
+
+**TypeScript versions:** `tsc` is TypeScript 7 (the `@typescript/native` alias). The `typescript` package is aliased to
+`@typescript/typescript6` (with an `overrides` entry) because typescript-eslint needs the TS 6 API. Don't "fix" these aliases.
+
+## Rules that must hold
+
+- **The LLM proposes, deterministic code decides.** core validates every decision; on any doubt or failure the result is HOLD / no order (NFR-02).
+- **Idempotency:** `snapshotId` is the idempotency key and the Alpaca `client_order_id`; a redelivered message or restart never places a duplicate order (NFR-04).
+- **Traceability:** every order links back to its snapshot and decision (NFR-09).
+- **Paper trading only:** the Alpaca client always uses `paper: true`. Long-only, no leverage, no shorting.
+- **Tickers, risk limits and schedules are configuration**, not code (NFR-12). Message contracts carry a `schemaVersion`.
+- **Money and prices:** Postgres `numeric` columns use Drizzle's default string mode to avoid float precision loss. Zod schemas that feed these columns validate numbers and output strings (`.transform(String)`).
+- **Positions are open trades:** there is no `positions` table; open positions are `trades` rows with `closed_at IS NULL`.
+- External calls (Alpaca, Kronos) use timeouts, retries with backoff and circuit breakers; the WebSocket reconnects on its own (NFR-05).
+- Secrets never go in Git, logs or images (NFR-07).
 
 ## Testing
 
-Use `bun test` to run tests.
-
-```ts#index.test.ts
-import { test, expect } from "bun:test";
-
-test("hello world", () => {
-  expect(1).toBe(1);
-});
-```
-
-## Type checking
-
-Use `bun check` to type check the project. It reads `tsconfig.json` and reports the same errors as `tsc`.
-
-- `bun check src/index.ts` checks one file and what it imports
-- `bun --check src/index.ts`, `bun test --check` and `bun build --check` type check first, and do nothing else if there is an error
-
-## Frontend
-
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
-
-Server:
-
-```ts#index.ts
-import index from "./index.html"
-
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
-```
-
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
-
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
-
-With the following `frontend.tsx`:
-
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
-
-// import .css files directly and it works
-import './index.css';
-
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-Then, run index.ts
-
-```sh
-bun --hot ./index.ts
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+Unit tests with Vitest for pure logic (Zod schemas, mappers, candle aggregation, indicators, risk rules); integration tests with
+Testcontainers; contract tests that parse the sample messages in `contracts/` with core's Zod schemas. Target ≥ 70% coverage in core (NFR-11).

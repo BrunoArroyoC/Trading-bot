@@ -26,5 +26,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+  // The default include skips dot-folders, so .test/ is listed explicitly.
+  "include": ["**/*", ".test/**/*"]
 }
