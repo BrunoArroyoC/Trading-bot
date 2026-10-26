@@ -1,3 +1,4 @@
+import type { Bar } from "@alpacahq/alpaca-trade-api";
 import * as z from "zod";
 
 // Validated as numbers, then turned into strings to match the `numeric` columns in db/schema.ts.
@@ -19,5 +20,21 @@ export const CandleSchema = z
     message: "high must be greater than or equal to low",
     path: ["high"],
   });
+
+
+
+export function mapperCandle(bar: Bar, ticker: string, timeframe = "1Hour") {
+  const candle = CandleSchema.parse({
+    ticker,
+    timeframe,
+    openTime: bar.timestamp,
+    open: bar.open,
+    high: bar.high,
+    low: bar.low,
+    close: bar.close,
+    volume: bar.volume,
+  });
+  return candle;
+}
 
 export type Candle = z.infer<typeof CandleSchema>;

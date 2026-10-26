@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { CandleSchema } from "../../src/layers/alpaca/model/candleZod.ts";
+import { CandleSchema, mapperCandle, type Candle } from "../../src/layers/alpaca/model/candleZod.ts";
 
 // A real bar received from the Alpaca crypto websocket.
 const bar = {
@@ -14,6 +14,21 @@ const bar = {
   vwap: 80482.3180677331,
   tradeCount: 35,
 };
+
+const badBar = {
+  symbol: "BTC/USD",
+  open: 80492.3,
+  high: -80492.4,
+  low: 80476.1,
+  close: 80476.15,
+  volume: 0.03395711,
+  timestamp: new Date("2026-10-25T11:59:00.000Z"),
+  timestampRaw: "2026-10-25T11:59:00.000000000Z",
+  vwap: 80482.3180677331,
+  tradeCount: 35,
+};
+
+
 
 // The websocket uses symbol/timestamp, the schema uses ticker/openTime.
 const input = {
@@ -72,4 +87,28 @@ describe("CandleSchema", () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["openTime"]);
   });
+});
+
+
+describe("Mapper for one candle ", () => {
+  test("Accept a candle type from the Alpaca endpoints", () => {
+    const candle = mapperCandle(bar, "BTC/USD");
+    expect(candle).toEqual({
+      ticker: "BTC/USD",
+      timeframe: "1Hour",
+      openTime: new Date("2026-10-25T11:59:00.000Z"),
+      open: "80492.3",
+      high: "80492.4",
+      low: "80476.1",
+      close: "80476.15",
+      volume: "0.03395711",
+    });
+  });
+
+  test("Reject a bad bar from Alpaca ", () => {
+    expect(() => mapperCandle(badBar, "BTC/USD")).toThrow("high must be greater than 0");
+  })
+
+
+
 });
