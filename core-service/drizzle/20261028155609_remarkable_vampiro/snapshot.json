@@ -1,0 +1,1387 @@
+{
+  "type": "base",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "f3cd109c-6b4c-4f7e-b823-e999387d6272",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "exit_reason"
+      ],
+      "writes": [
+        "s|enum|public.exit_reason",
+        "n|enum|public.exit_reason",
+        "e|enum|public.exit_reason",
+        "n|type|public.exit_reason"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "order_side"
+      ],
+      "writes": [
+        "s|enum|public.order_side",
+        "n|enum|public.order_side",
+        "e|enum|public.order_side",
+        "n|type|public.order_side"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "order_type"
+      ],
+      "writes": [
+        "s|enum|public.order_type",
+        "n|enum|public.order_type",
+        "e|enum|public.order_type",
+        "n|type|public.order_type"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "candles"
+      ],
+      "writes": [
+        "s|tbl|public.candles",
+        "n|tbl|public.candles",
+        "e|tbl|public.candles",
+        "n|rel|public.candles",
+        "n|type|public.candles",
+        "n|rel|public.candles_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "equity_history"
+      ],
+      "writes": [
+        "s|tbl|public.equity_history",
+        "n|tbl|public.equity_history",
+        "e|tbl|public.equity_history",
+        "n|rel|public.equity_history",
+        "n|type|public.equity_history",
+        "n|rel|public.equity_history_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "orders"
+      ],
+      "writes": [
+        "s|tbl|public.orders",
+        "n|tbl|public.orders",
+        "e|tbl|public.orders",
+        "n|rel|public.orders",
+        "n|type|public.orders",
+        "n|rel|public.orders_pkey",
+        "n|rel|public.orders_client_order_id_key",
+        "n|rel|public.orders_alpaca_order_id_key"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.order_side",
+        "n|enum|public.order_type"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "risk_events"
+      ],
+      "writes": [
+        "s|tbl|public.risk_events",
+        "n|tbl|public.risk_events",
+        "e|tbl|public.risk_events",
+        "n|rel|public.risk_events",
+        "n|type|public.risk_events",
+        "n|rel|public.risk_events_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "settings"
+      ],
+      "writes": [
+        "s|tbl|public.settings",
+        "n|tbl|public.settings",
+        "e|tbl|public.settings",
+        "n|rel|public.settings",
+        "n|type|public.settings",
+        "n|rel|public.settings_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "snapshots"
+      ],
+      "writes": [
+        "s|tbl|public.snapshots",
+        "n|tbl|public.snapshots",
+        "e|tbl|public.snapshots",
+        "n|rel|public.snapshots",
+        "n|type|public.snapshots",
+        "n|rel|public.snapshots_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "trades"
+      ],
+      "writes": [
+        "s|tbl|public.trades",
+        "n|tbl|public.trades",
+        "e|tbl|public.trades",
+        "n|rel|public.trades",
+        "n|type|public.trades",
+        "n|rel|public.trades_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.exit_reason"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "orders",
+        "orders_ticker_idx"
+      ],
+      "writes": [
+        "s|idx|public.orders_ticker_idx",
+        "n|idx|public.orders_ticker_idx",
+        "e|idx|public.orders_ticker_idx",
+        "n|rel|public.orders_ticker_idx"
+      ],
+      "reads": [
+        "n|tbl|public.orders",
+        "n|sch|public",
+        "n|col|public.orders.ticker"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "risk_events",
+        "risk_events_time_idx"
+      ],
+      "writes": [
+        "s|idx|public.risk_events_time_idx",
+        "n|idx|public.risk_events_time_idx",
+        "e|idx|public.risk_events_time_idx",
+        "n|rel|public.risk_events_time_idx"
+      ],
+      "reads": [
+        "n|tbl|public.risk_events",
+        "n|sch|public",
+        "n|col|public.risk_events.time"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "snapshots",
+        "snapshots_ticker_close_idx"
+      ],
+      "writes": [
+        "s|idx|public.snapshots_ticker_close_idx",
+        "n|idx|public.snapshots_ticker_close_idx",
+        "e|idx|public.snapshots_ticker_close_idx",
+        "n|rel|public.snapshots_ticker_close_idx"
+      ],
+      "reads": [
+        "n|tbl|public.snapshots",
+        "n|sch|public",
+        "n|col|public.snapshots.ticker",
+        "n|col|public.snapshots.candle_close_time"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "trades",
+        "trades_ticker_opened_idx"
+      ],
+      "writes": [
+        "s|idx|public.trades_ticker_opened_idx",
+        "n|idx|public.trades_ticker_opened_idx",
+        "e|idx|public.trades_ticker_opened_idx",
+        "n|rel|public.trades_ticker_opened_idx"
+      ],
+      "reads": [
+        "n|tbl|public.trades",
+        "n|sch|public",
+        "n|col|public.trades.ticker",
+        "n|col|public.trades.opened_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "trades",
+        "trades_open_idx"
+      ],
+      "writes": [
+        "s|idx|public.trades_open_idx",
+        "n|idx|public.trades_open_idx",
+        "e|idx|public.trades_open_idx",
+        "n|rel|public.trades_open_idx"
+      ],
+      "reads": [
+        "n|tbl|public.trades",
+        "n|sch|public",
+        "n|col|public.trades.ticker"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "orders"
+      ],
+      "writes": [
+        "s|fk|public.orders.orders_snapshot_id_snapshots_id_fkey",
+        "n|fk|public.orders.orders_snapshot_id_snapshots_id_fkey",
+        "e|fk|public.orders.orders_snapshot_id_snapshots_id_fkey",
+        "n|con|public.orders.orders_snapshot_id_snapshots_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.orders",
+        "n|sch|public",
+        "n|tbl|public.snapshots",
+        "n|sch|public",
+        "n|col|public.orders.snapshot_id",
+        "n|col|public.snapshots.id",
+        "e|uniqueness|public.snapshots.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "risk_events"
+      ],
+      "writes": [
+        "s|fk|public.risk_events.risk_events_snapshot_id_snapshots_id_fkey",
+        "n|fk|public.risk_events.risk_events_snapshot_id_snapshots_id_fkey",
+        "e|fk|public.risk_events.risk_events_snapshot_id_snapshots_id_fkey",
+        "n|con|public.risk_events.risk_events_snapshot_id_snapshots_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.risk_events",
+        "n|sch|public",
+        "n|tbl|public.snapshots",
+        "n|sch|public",
+        "n|col|public.risk_events.snapshot_id",
+        "n|col|public.snapshots.id",
+        "e|uniqueness|public.snapshots.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trades"
+      ],
+      "writes": [
+        "s|fk|public.trades.trades_entry_order_id_orders_id_fkey",
+        "n|fk|public.trades.trades_entry_order_id_orders_id_fkey",
+        "e|fk|public.trades.trades_entry_order_id_orders_id_fkey",
+        "n|con|public.trades.trades_entry_order_id_orders_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trades",
+        "n|sch|public",
+        "n|tbl|public.orders",
+        "n|sch|public",
+        "n|col|public.trades.entry_order_id",
+        "n|col|public.orders.id",
+        "e|uniqueness|public.orders.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trades"
+      ],
+      "writes": [
+        "s|fk|public.trades.trades_exit_order_id_orders_id_fkey",
+        "n|fk|public.trades.trades_exit_order_id_orders_id_fkey",
+        "e|fk|public.trades.trades_exit_order_id_orders_id_fkey",
+        "n|con|public.trades.trades_exit_order_id_orders_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trades",
+        "n|sch|public",
+        "n|tbl|public.orders",
+        "n|sch|public",
+        "n|col|public.trades.exit_order_id",
+        "n|col|public.orders.id",
+        "e|uniqueness|public.orders.id"
+      ]
+    }
+  ],
+  "ddl": [
+    {
+      "schema": "public",
+      "name": "candles",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "equity_history",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "orders",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "risk_events",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "settings",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "snapshots",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "trades",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "exit_reason",
+      "values": [
+        "stop",
+        "signal",
+        "kill_switch"
+      ],
+      "entityType": "enums"
+    },
+    {
+      "schema": "public",
+      "name": "order_side",
+      "values": [
+        "buy",
+        "sell"
+      ],
+      "entityType": "enums"
+    },
+    {
+      "schema": "public",
+      "name": "order_type",
+      "values": [
+        "market",
+        "limit",
+        "stop",
+        "stop_limit",
+        "trailing_stop"
+      ],
+      "entityType": "enums"
+    },
+    {
+      "schema": "public",
+      "table": "candles",
+      "name": "ticker",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "candles",
+      "name": "timeframe",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "candles",
+      "name": "open_time",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "candles",
+      "name": "open",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "candles",
+      "name": "high",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "candles",
+      "name": "low",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "candles",
+      "name": "close",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "candles",
+      "name": "volume",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "equity_history",
+      "name": "time",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "equity_history",
+      "name": "equity",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "equity_history",
+      "name": "cash",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "equity_history",
+      "name": "buying_power",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "snapshot_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "client_order_id",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "alpaca_order_id",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "ticker",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "side",
+      "type": "order_side",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "type",
+      "type": "order_type",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "qty",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "status",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "filled_qty",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'0'",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "filled_avg_price",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "submitted_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "filled_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "risk_events",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "risk_events",
+      "name": "time",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "risk_events",
+      "name": "snapshot_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "risk_events",
+      "name": "reason",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "settings",
+      "name": "key",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "settings",
+      "name": "value",
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "snapshots",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "snapshots",
+      "name": "ticker",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "snapshots",
+      "name": "candle_close_time",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "snapshots",
+      "name": "data",
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "snapshots",
+      "name": "degraded",
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "snapshots",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "ticker",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "entry_order_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "exit_order_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "qty",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "entry_price",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "exit_price",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "pnl",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "pnl_pct",
+      "type": "numeric",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "opened_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "closed_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "exit_reason",
+      "type": "exit_reason",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "orders_ticker_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "ticker",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "risk_events",
+      "name": "risk_events_time_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "time",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "snapshots",
+      "name": "snapshots_ticker_close_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "ticker",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "candle_close_time",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "trades_ticker_opened_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "ticker",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "opened_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "trades_open_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "ticker",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"closed_at\" IS NULL",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "orders_snapshot_id_snapshots_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "snapshot_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "snapshots",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "risk_events",
+      "name": "risk_events_snapshot_id_snapshots_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "snapshot_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "snapshots",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "trades_entry_order_id_orders_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "entry_order_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "orders",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "trades_exit_order_id_orders_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "exit_order_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "orders",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "candles",
+      "name": "candles_pkey",
+      "columns": [
+        "ticker",
+        "timeframe",
+        "open_time"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "equity_history",
+      "name": "equity_history_pkey",
+      "columns": [
+        "time"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "orders_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "risk_events",
+      "name": "risk_events_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "settings",
+      "name": "settings_pkey",
+      "columns": [
+        "key"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "snapshots",
+      "name": "snapshots_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "trades",
+      "name": "trades_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "orders_client_order_id_key",
+      "nameExplicit": false,
+      "columns": [
+        "client_order_id"
+      ],
+      "nullsNotDistinct": false,
+      "entityType": "uniques"
+    },
+    {
+      "schema": "public",
+      "table": "orders",
+      "name": "orders_alpaca_order_id_key",
+      "nameExplicit": false,
+      "columns": [
+        "alpaca_order_id"
+      ],
+      "nullsNotDistinct": false,
+      "entityType": "uniques"
+    }
+  ]
+}

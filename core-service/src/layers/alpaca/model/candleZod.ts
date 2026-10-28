@@ -1,4 +1,4 @@
-import type { Bar } from "@alpacahq/alpaca-trade-api";
+import {type Bar } from "@alpacahq/alpaca-trade-api";
 import * as z from "zod";
 
 // Validated as numbers, then turned into strings to match the `numeric` columns in db/schema.ts.
@@ -22,7 +22,7 @@ export const CandleSchema = z
   });
 
 
-
+//Transform to Bar to Candle
 export function mapperCandle(bar: Bar, ticker: string, timeframe = "1Hour") {
   const candle = CandleSchema.parse({
     ticker,
@@ -36,5 +36,28 @@ export function mapperCandle(bar: Bar, ticker: string, timeframe = "1Hour") {
   });
   return candle;
 }
+
+//Function to check each bar if its a bad bar do not pick it and pass the next only if it is in the websocket secction in the start do not start if we do not have all the good bars
+export function checkBar(bar: Bar, ticker: string, timeframe = "1Hour") {
+  const candle = CandleSchema.safeParse({
+    ticker,
+    timeframe,
+    openTime: bar.timestamp,
+    open: bar.open,
+    high: bar.high,
+    low: bar.low,
+    close: bar.close,
+    volume: bar.volume,
+  });
+  if (!candle.success) {
+    return { ok: false, error: "Bad candle" };
+  }
+
+  return {ok: true, candle}
+}
+
+
+
+
 
 export type Candle = z.infer<typeof CandleSchema>;

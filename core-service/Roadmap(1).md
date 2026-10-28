@@ -29,7 +29,7 @@ Goal: core receives live data from Alpaca and detects every 1H candle close with
 - [x] **1.1** Install `@alpacahq/alpaca-trade-api` v5 and create a client module pointed at the paper environment. *Done when:* core logs the paper account equity at startup.
 - [x] **1.2** Define a `Candle` Zod schema and a mapper from the Alpaca bar type. *Done when:* a unit test checks every field (time, OHLC, volume).
 - [x] **1.3** Load the last 512 1H bars per ticker through the REST API at startup. *Done when:* a log shows 512 bars and the timestamp of the latest closed one.
-- [ ] **1.4** Create a `candles` table in Drizzle (unique on ticker + time) and upsert the history. *Done when:* restarting core twice creates no duplicate rows.
+- [x] **1.4** Create a `candles` table in Drizzle (unique on ticker + time) and upsert the history. *Done when:* restarting core twice creates no duplicate rows.
 - [ ] **1.5** Subscribe to the WebSocket minute-bar stream for the configured tickers. *Done when:* a log line appears for each new minute bar.
 - [ ] **1.6** Write a pure function that aggregates minute bars into 1H candles. *Done when:* unit tests cover a normal hour, a missing minute and the hour boundary.
 - [ ] **1.7** Emit a typed `candleClosed` event per ticker when an hour closes, and confirm the candle against the REST 1H bar. *Done when:* over 3 hours, exactly one event per ticker per hour is logged and it matches Alpaca's bar.

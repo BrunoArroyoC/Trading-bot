@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { CandleSchema, mapperCandle, type Candle } from "../../src/layers/alpaca/model/candleZod.ts";
+import { CandleSchema, mapperCandle} from "../../src/layers/alpaca/model/candleZod.ts";
 
 // A real bar received from the Alpaca crypto websocket.
 const bar = {
