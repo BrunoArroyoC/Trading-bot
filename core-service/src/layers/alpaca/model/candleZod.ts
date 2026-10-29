@@ -57,6 +57,67 @@ export function checkBar(bar: Bar, ticker: string, timeframe = "1Hour") {
 }
 
 
+export function convertToHourCandle(bars: Bar[], ticker: string) {
+  // `as const` makes `ok` the literal false/true, so `if (result.ok)` tells TypeScript `candle` exists.
+  if (!bars.length) {
+    return { ok: false as const, error: "Error, no bars" };
+  }
+  // noUncheckedIndexedAccess types bars[i] as `Bar | undefined`; the length check above guarantees both exist.
+  const firstBar = bars[0]!;
+  const lastBar = bars[bars.length - 1]!;
+  if (bars.length < 59) {
+    return { ok: false as const, error: "Error, no bars" };
+  }
+  const max = Math.max(...bars.map((b) => b.high));
+  const min = Math.min(...bars.map((b) => b.low));
+  const volumeBar = bars.reduce((accum, act) => accum + act.volume, 0);
+
+
+  const openTime = new Date(hourStart(firstBar.timestamp));
+
+  const auxBar: Bar = {
+    timestamp: openTime,
+    open: firstBar.open,
+    high: max,
+    low: min,
+    close: lastBar.close,
+    volume: Number(volumeBar.toFixed(8)),
+  };
+
+  const candle = mapperCandle(auxBar, ticker)
+  return { ok: true as const, candle };
+}
+
+// Start of the UTC hour a time belongs to, in ms (18:42 → 18:00).
+export function hourStart(date: Date): number {
+  const start = new Date(date);
+  start.setUTCMinutes(0, 0, 0);
+  return start.getTime();
+}
+
+// The "decoder" between the two queues: a bar from the same hour joins currentHour;
+// a bar from a later hour closes currentHour (returned as closedHour) and starts a new one.
+// Pure: returns new arrays instead of changing the input.
+export function addBarToHour(currentHour: Bar[], bar: Bar) {
+  const firstBar = currentHour[0];
+  if (!firstBar) {
+    return { currentHour: [bar], closedHour: null };
+  }
+
+  const barHour = hourStart(bar.timestamp);
+  const currentHourStart = hourStart(firstBar.timestamp);
+
+  // A late bar from an hour that is already closed: ignore it (the REST check corrects that hour).
+  if (barHour < currentHourStart) {
+    return { currentHour, closedHour: null };
+  }
+  if (barHour > currentHourStart) {
+    return { currentHour: [bar], closedHour: currentHour };
+  }
+  return { currentHour: [...currentHour, bar], closedHour: null };
+}
+
+
 
 
 
