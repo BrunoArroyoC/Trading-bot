@@ -13,7 +13,7 @@ Jev is a 24/7 automated paper-trading platform built as TypeScript microservices
 
 ### 1.2 How it works
 
-The **core** service streams live market data from Alpaca over WebSocket. When a 1H candle closes, it computes the technical indicators, asks the **Kronos** service for a candle and volatility forecast, and reads the latest market sentiment from the cache. It packs all of this into a market snapshot and publishes it to a queue.
+The **core** service fetches each closed 1H candle from the Alpaca REST API with a scheduled job, a minute after every hour. When a 1H candle closes, it computes the technical indicators, asks the **Kronos** service for a candle and volatility forecast, and reads the latest market sentiment from the cache. It packs all of this into a market snapshot and publishes it to a queue.
 
 **Jev** consumes the snapshot, looks up similar past trades in its memory, and asks an LLM for a structured decision: BUY, SELL or HOLD, with a confidence and its reasoning. Jev publishes the decision back to the core.
 
@@ -55,7 +55,7 @@ The core sends a snapshot to Jev through RabbitMQ and receives the decision on a
 
 | Service | Language | Responsibility | Communicates with |
 | --- | --- | --- | --- |
-| core-service | TypeScript / Express | Market data, indicators, snapshot, risk, order execution | Alpaca (WebSocket + REST), Kronos (REST), RabbitMQ, Postgres, Redis |
+| core-service | TypeScript / Express | Market data, indicators, snapshot, risk, order execution | Alpaca (REST for market data and orders, WebSocket for trade updates), Kronos (REST), RabbitMQ, Postgres, Redis |
 | jev-service | TypeScript / Express + AI SDK | Trading decision, trade memory, sentiment job, Obsidian export | RabbitMQ, LLM provider, Postgres + pgvector, Redis |
 | kronos-service | Python / FastAPI | Candle and volatility forecast per ticker | Called by core over REST |
 | auth-service | TypeScript / Express + Better Auth | Sign-in, sessions, users and roles, JWT issuing (JWKS) | Dashboard, gateway, Postgres |
@@ -71,7 +71,7 @@ The MVP needs every **Must** requirement; **Should** items come in the next phas
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| FR-01 | Connect to the Alpaca market data WebSocket for every configured ticker, reconnect with exponential backoff and resubscribe after a drop. | Must |
+| FR-01 | A minute after each hour, fetch the last closed 1H bar for every configured ticker in one Alpaca REST request (scheduled with `croner`), retrying with exponential backoff on failure or while the bar is not yet published. | Must |
 | FR-02 | On startup, load recent history (at least 512 1H bars per ticker) through the Alpaca REST API so indicators and Kronos have enough context. | Must |
 | FR-03 | Detect each 1H candle close per ticker and start one analysis cycle for it. | Must |
 | FR-04 | Compute indicators with `trading-signals`: RSI(14), MACD(12,26,9), EMA 20/50/200, Bollinger Bands(20,2), ATR(14) and volume average. | Must |
@@ -136,7 +136,7 @@ The system must keep running unattended in the home lab, fail safe (no order whe
 | NFR-02 | Fail-safe | Any failure in Kronos, Jev, the LLM or sentiment results in HOLD, never in an unvalidated order. |
 | NFR-03 | Latency | A full cycle (candle close → order sent) completes in under 2 minutes; decisions older than 10 minutes are discarded. |
 | NFR-04 | Idempotency | A redelivered message or a restart never places a duplicate order (`snapshotId` as idempotency key and `client_order_id`). |
-| NFR-05 | Resilience | Calls to Alpaca, Kronos and the LLM use timeouts, retries with backoff and circuit breakers; the WebSocket reconnects on its own. |
+| NFR-05 | Resilience | Calls to Alpaca, Kronos and the LLM use timeouts, retries with backoff and circuit breakers; the trade-updates WebSocket reconnects on its own. |
 | NFR-06 | Consistency | Messages for the same ticker are processed in order; positions are reconciled with Alpaca on startup and every hour. |
 | NFR-07 | Security | API keys and passwords live in Kubernetes Secrets (or Sealed Secrets), never in Git or images; passwords hashed by Better Auth; JWT on every external route; environment variables validated with Zod at startup. |
 | NFR-08 | Exposure | Only the gateway is reachable from outside the cluster, through HTTPS (Cloudflare Tunnel or reverse proxy); databases and the broker stay internal. |
@@ -151,17 +151,17 @@ The system must keep running unattended in the home lab, fail safe (no order whe
 
 ## 5. Example workflow: one 1H candle
 
-A BTC/USD candle closes at 14:00 UTC and, about 30 seconds later, a paper buy order is on Alpaca with its stop-loss attached. Times below are illustrative targets.
+A BTC/USD candle closes at 14:00 UTC and, about a minute and a half later, a paper buy order is on Alpaca with its stop-loss attached. Times below are illustrative targets.
 
 1. **13:30 · sentiment job (jev).** The scheduled job collects BTC news, the LLM scores it +0.35 with confidence 0.6, and the result goes to Redis with its timestamp.
-2. **14:00:00 · candle close (core).** The 1H candle for 13:00–14:00 is complete; core appends it to the ticker's candle buffer.
-3. **14:00:01 · indicators (core).** `trading-signals` computes RSI 41, MACD crossing up, price above EMA 200, ATR 620.
-4. **14:00:02 · forecast (core → kronos).** Core sends the last 512 candles; Kronos returns the next 6 candles and expected volatility.
-5. **14:00:05 · snapshot (core).** Core reads sentiment from Redis, builds the `MarketSnapshot`, stores it and publishes it to `analysis.requests`.
-6. **14:00:06 · memory (jev).** Jev consumes the snapshot and retrieves the 5 most similar past setups and how they ended.
-7. **14:00:20 · decision (jev → LLM).** The AI SDK returns a `Decision` validated by Zod: BUY, confidence 0.68, with its reasoning. Jev stores it and publishes it to `decisions` with `validUntil` 14:10.
-8. **14:00:21 · risk check (core).** Not expired, not a duplicate, no open BTC position, daily loss limit not hit. Size = 0.5% of equity at risk with the stop 1.5 × ATR below entry.
-9. **14:00:22 · execution (core → Alpaca).** Core sends a bracket order with `client_order_id` = `snapshotId` and the stop-loss attached.
+2. **14:01:00 · candle close (core).** The `croner` job fetches the closed 13:00–14:00 bar from the Alpaca REST API, upserts it and emits `candleClosed`; core appends it to the ticker's candle buffer.
+3. **14:01:01 · indicators (core).** `trading-signals` computes RSI 41, MACD crossing up, price above EMA 200, ATR 620.
+4. **14:01:02 · forecast (core → kronos).** Core sends the last 512 candles; Kronos returns the next 6 candles and expected volatility.
+5. **14:01:05 · snapshot (core).** Core reads sentiment from Redis, builds the `MarketSnapshot`, stores it and publishes it to `analysis.requests`.
+6. **14:01:06 · memory (jev).** Jev consumes the snapshot and retrieves the 5 most similar past setups and how they ended.
+7. **14:01:20 · decision (jev → LLM).** The AI SDK returns a `Decision` validated by Zod: BUY, confidence 0.68, with its reasoning. Jev stores it and publishes it to `decisions` with `validUntil` 14:11.
+8. **14:01:21 · risk check (core).** Not expired, not a duplicate, no open BTC position, daily loss limit not hit. Size = 0.5% of equity at risk with the stop 1.5 × ATR below entry.
+9. **14:01:22 · execution (core → Alpaca).** Core sends a bracket order with `client_order_id` = `snapshotId` and the stop-loss attached.
 10. **Later · close (core → jev).** The stop or a SELL decision closes the position. Core computes P&L and publishes `trade.closed`; Jev embeds the trade in pgvector and writes the Obsidian note.
 
 **Alternative paths:**

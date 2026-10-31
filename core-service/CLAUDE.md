@@ -4,8 +4,14 @@ https://docs.alpaca.markets/us/docs/getting-started
 https://alpacahq.github.io/alpaca-trade-api-js/
 
 Part of **Jev**, a 24/7 automated paper-trading platform (see `Jev Trading Platform — Mini SRS(1).md` and `Roadmap(1).md`).
-core-service is the only service that talks to the broker: it streams Alpaca market data, detects 1H candle closes,
-computes indicators, builds the `MarketSnapshot`, validates decisions against the risk rules and places orders.
+core-service is the only service that talks to the broker: it fetches each closed 1H candle from the Alpaca REST API
+(a `croner` job at HH:01), computes indicators, builds the `MarketSnapshot`, validates decisions against the risk rules,
+places orders and follows fills through the trade-updates WebSocket.
+
+**Market data is REST + cron, not the WebSocket** (decided 2026-10-30; SRS FR-01, roadmap 1.5–1.9). One request covers
+all tickers, quiet coins don't break it, restarts lose nothing, and Alpaca allows only one market-data WebSocket per account.
+Don't reintroduce the minute-bar stream for candles. The only Alpaca WebSocket is trade updates (FR-11, task 4.7);
+the dashboard gets live data from core through the gateway, never from Alpaca directly.
 
 ## Source of truth
 
@@ -42,9 +48,9 @@ bunx drizzle-kit migrate    # apply migrations
 - TypeScript strict, ES modules, Express 5 (`helmet`, `cors`).
 - **Zod v4** for env vars (`src/env.ts`), request bodies/queries, queue messages and external responses. Derive types with `z.infer`.
 - **Drizzle ORM** + `drizzle-kit` with the Bun SQL driver (`drizzle-orm/bun-sql`); schema in `src/db/schema.ts`, migrations in `drizzle/`.
-- `@alpacahq/alpaca-trade-api` **v5** (the version Alpaca recommends; don't downgrade), paper environment, for market data WebSocket, REST history and orders.
+- `@alpacahq/alpaca-trade-api` **v5** (the version Alpaca recommends; don't downgrade), paper environment, for REST market data (history and hourly bars), orders and the trade-updates WebSocket.
 - `trading-signals` for indicators: RSI(14), MACD(12,26,9), EMA 20/50/200, Bollinger(20,2), ATR(14), volume average.
-- `amqplib` (RabbitMQ), `ioredis` (Redis), `cockatiel` (timeout/retry/circuit breaker), native `fetch`, `croner`, `pino` + `pino-http`.
+- `amqplib` (RabbitMQ), `ioredis` (Redis), `cockatiel` (timeout/retry/circuit breaker), native `fetch`, `croner` (hourly candle job), `pino` + `pino-http`.
 - Testing: Vitest, Supertest, Testcontainers, MSW (mock Alpaca and Kronos).
 
 ## Project layout
@@ -53,7 +59,7 @@ bunx drizzle-kit migrate    # apply migrations
 index.ts                         entry point (Express app, pino-http request logs)
 src/logger.ts                    shared pino logger; use it instead of console.log
 src/db/schema.ts                 Drizzle tables
-src/layers/alpaca/               Alpaca client and streams
+src/layers/alpaca/               Alpaca client, REST candle fetch, candle repository
 src/layers/alpaca/model/         Zod schemas for Alpaca data (e.g. candleZod.ts)
 drizzle/                         generated migrations
 .test/                           all tests, as *.test.ts (e.g. .test/validationsModel/ for Zod schema tests)
@@ -74,7 +80,7 @@ Tests go in `.test/`, not next to the code. `.test/` is listed in `tsconfig.json
 - **Tickers, risk limits and schedules are configuration**, not code (NFR-12). Message contracts carry a `schemaVersion`.
 - **Money and prices:** Postgres `numeric` columns use Drizzle's default string mode to avoid float precision loss. Zod schemas that feed these columns validate numbers and output strings (`.transform(String)`).
 - **Positions are open trades:** there is no `positions` table; open positions are `trades` rows with `closed_at IS NULL`.
-- External calls (Alpaca, Kronos) use timeouts, retries with backoff and circuit breakers; the WebSocket reconnects on its own (NFR-05).
+- External calls (Alpaca, Kronos) use timeouts, retries with backoff and circuit breakers; the hourly candle fetch retries while Alpaca hasn't published the bar yet; the trade-updates WebSocket reconnects on its own (NFR-05).
 - Secrets never go in Git, logs or images (NFR-07).
 
 ## Testing

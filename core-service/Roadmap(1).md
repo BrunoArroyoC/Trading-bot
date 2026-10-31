@@ -25,16 +25,16 @@ Goal: every TypeScript service starts locally, the local infrastructure runs in 
 
 ## Phase 1 · Market data in core
 
-Goal: core receives live data from Alpaca and detects every 1H candle close without gaps.
+Goal: core fetches every closed 1H candle from the Alpaca REST API on a schedule, without gaps. (Market data uses REST + `croner`, not the WebSocket: one request covers all tickers, quiet coins with missing minute bars are not a problem, and restarts lose nothing. The trade-updates WebSocket stays, see 4.7.)
 - [x] **1.1** Install `@alpacahq/alpaca-trade-api` v5 and create a client module pointed at the paper environment. *Done when:* core logs the paper account equity at startup.
 - [x] **1.2** Define a `Candle` Zod schema and a mapper from the Alpaca bar type. *Done when:* a unit test checks every field (time, OHLC, volume).
 - [x] **1.3** Load the last 512 1H bars per ticker through the REST API at startup. *Done when:* a log shows 512 bars and the timestamp of the latest closed one.
 - [x] **1.4** Create a `candles` table in Drizzle (unique on ticker + time) and upsert the history. *Done when:* restarting core twice creates no duplicate rows.
-- [x] **1.5** Subscribe to the WebSocket minute-bar stream for the configured tickers. *Done when:* a log line appears for each new minute bar.
-- [ ] **1.6** Write a pure function that aggregates minute bars into 1H candles. *Done when:* unit tests cover a normal hour, a missing minute and the hour boundary.
-- [ ] **1.7** Emit a typed `candleClosed` event per ticker when an hour closes, and confirm the candle against the REST 1H bar. *Done when:* over 3 hours, exactly one event per ticker per hour is logged and it matches Alpaca's bar.
-- [ ] **1.8** Reconnect the WebSocket with exponential backoff and resubscribe. *Done when:* after disconnecting the network for a minute, logs show the reconnect and bars resume.
-- [ ] **1.9** Backfill any candles missed while disconnected. *Done when:* after a 2-hour stop, the `candles` table has no gap.
+- [x] **1.5** Schedule a `croner` job one minute after each hour that fetches the last closed 1H bar for all configured tickers in one REST request and upserts it. *Done when:* each hour, one log line per ticker shows the saved bar and its open time.
+- [ ] **1.6** Write a pure function that picks the last closed 1H bar per ticker from a REST response, ignoring the hour still in progress. *Done when:* unit tests cover a normal response, a missing ticker and the open current hour.
+- [x] **1.7** Emit a typed `candleClosed` event per ticker after the hourly upsert. *Done when:* over 3 hours, exactly one event per ticker per hour is logged.
+- [x] **1.8** Wrap the hourly REST call in retries with exponential backoff (`cockatiel`), also retrying while Alpaca has not published the closed bar yet. *Done when:* with the network off for a minute around the hour, logs show the retries and the candle is still saved.
+- [ ] **1.9** Backfill missed candles: each run fetches the last few hours, so a failed run or a stop is filled by the upsert. *Done when:* after a 2-hour stop, the `candles` table has no gap.
 - [ ] **1.10** Add an integration test with Testcontainers for Postgres and MSW mocking the Alpaca REST API. *Done when:* it passes in Jenkins.
 
 **Gate:** core runs 24 hours locally and stores every 1H candle with no gaps or duplicates.
