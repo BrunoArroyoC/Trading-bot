@@ -22,7 +22,7 @@ services:
      - redis_tradingBot:/data
 
   db:
-    image: postgres:latest
+    image: pgvector/pgvector:0.8.7-pg18-trixie
     environment:
       POSTGRES_USER: trading_jev
       POSTGRES_PASSWORD: tradingBotBr1$
