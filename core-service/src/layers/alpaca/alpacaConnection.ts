@@ -1,7 +1,7 @@
 import { Alpaca, timeFrame, TimeFrameUnit} from "@alpacahq/alpaca-trade-api";
 import { logger } from "../../logger.ts";
 import { mapperCandle} from "./model/candleZod.ts";
-import { upsertCandle} from "./candleRespository.ts";
+import { extractTimeLastClosedCandle, upsertCandle} from "./candleRespository.ts";
 import { Cron } from "croner";
 import type { HourCandleManager } from "../model/1HourCandleManager.ts";
 import { circuitBreaker, ConsecutiveBreaker, ExponentialBackoff, handleAll, retry, wrap } from "cockatiel";
@@ -52,9 +52,21 @@ export async function getTheLast512Bars1H(alpaca: Alpaca, ticker: string) {
 
 
 
-export function cronGetHourCandle(alpaca: Alpaca, ticker: string, event: HourCandleManager) {
+export async function cronGetHourCandle(alpaca: Alpaca, ticker: string, event: HourCandleManager) {
+
   new Cron('0 1 * * * * *', { timezone: "UTC", protect: true }, async () => {
     try {
+
+      const newestOpenTime = await extractTimeLastClosedCandle(ticker);
+      const newOpenTime = newestOpenTime[0];
+      newOpenTime?.openTime?.setUTCMinutes(0, 0, 0);
+
+      if (!newOpenTime?.openTime) {
+        logger.warn({ ticker }, "No saved candle to start from");
+        return;
+      }
+      const lastSaved = newOpenTime.openTime;
+
       const currentHourStart = new Date();
       currentHourStart.setUTCMinutes(0, 0, 0);
       const auxCandle = await retryBreaker.execute( async () => {
@@ -62,9 +74,10 @@ export function cronGetHourCandle(alpaca: Alpaca, ticker: string, event: HourCan
           loc: "us-1",
           symbols: [ticker],
           timeframe: timeFrame(1, TimeFrameUnit.Hour),
-          start: new Date(currentHourStart.getTime() - (3 + 8) * HOUR_MS),
+          start: lastSaved,
+          //start: new Date(lastSaved.getTime() - (3 + 8) * HOUR_MS),  //To try later in testing,
         });
-        const closedBars = (bars[ticker] ?? []).filter((bar) => bar.timestamp < currentHourStart).slice(-3);
+        const closedBars = (bars[ticker] ?? []).filter((bar) => bar.timestamp < currentHourStart);
         const candles = closedBars.map((bar) => mapperCandle(bar, ticker));
         const newest = candles.at(-1);
         if (!newest || newest.openTime.getTime() !== currentHourStart.getTime() - HOUR_MS) {
