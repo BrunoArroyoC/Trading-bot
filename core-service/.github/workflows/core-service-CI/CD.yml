@@ -14,11 +14,11 @@ jobs:
 
     # Actions for each station
     steps:
-      - name: Checkout code
+      - name: Checkout code #Get your project
         uses: actions/checkout@v4
 
-      - name: Setup Bun
+      - name: Setup Bun #Install bun
         uses: oven-sh/setup-bun@v2
 
-      - name: CI test
+      - name: CI test #Make the test
         run: bunx vitest
