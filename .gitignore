@@ -1,0 +1,2 @@
+# Secrets for docker-compose (Postgres, RabbitMQ). Never commit (NFR-07).
+.env
