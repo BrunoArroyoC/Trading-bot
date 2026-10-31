@@ -1,0 +1,37 @@
+name: CI/CD core-service
+
+# Trigger when I do git push to main
+on:
+  push:
+    branches:
+      - main
+
+# Pipeline
+jobs:
+  # Each station
+  CI:
+    runs-on: ubuntu-latest
+    # Every "run" step runs inside core-service/, where package.json is.
+    defaults:
+      run:
+        working-directory: core-service
+
+    # Actions for each station
+    steps:
+      - name: Checkout code #Get your project
+        uses: actions/checkout@v4
+
+      - name: Setup Bun #Install bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies #The machine starts empty, without node_modules
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: CI test #Make the test
+        run: bun run test --run
