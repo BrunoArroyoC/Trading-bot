@@ -34,4 +34,8 @@ jobs:
         run: bun run lint
 
       - name: CI test #Make the test
-        run: bun run test --run
+        run: bun run test --run --project unit
+
+      # Postgres in Docker (Testcontainers) + Alpaca mocked with MSW. GitHub's runner has Docker.
+      - name: Integration test
+        run: bun run test --run --project integration
