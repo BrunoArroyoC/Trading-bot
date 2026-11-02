@@ -4,10 +4,12 @@ import { Alpaca } from "@alpacahq/alpaca-trade-api";
 import express, { type Express,  } from 'express';
 import { pinoHttp } from "pino-http";
 import { HourCandleManager } from "./src/layers/model/1HourCandleManager.ts";
+import { BufferCandle } from "./src/layers/model/candleBuffer.ts";
 
 const app: Express = express();
 
 const eventClosedCandle = new HourCandleManager();
+const bufferCandle: BufferCandle = new BufferCandle();
 
 
 const TICKER = "BTC/USD";
@@ -25,9 +27,14 @@ eventClosedCandle.waitForClosedCandle(({ticker, inserted, updated}) => {
   logger.info({ ticker, inserted, updated }, "Candle Close and reciving");
 });
 
+eventClosedCandle.addingToBUffer((candles) => {
+  candles.forEach((candle) => bufferCandle.pushToBuffer(candle));
+});
+
+
 try {
   await startConnectionAlpaca(alpaca);
-  await getTheLast512Bars1H(alpaca, TICKER);
+  await getTheLast512Bars1H(alpaca, TICKER, bufferCandle);
   cronGetHourCandle(alpaca, TICKER, eventClosedCandle);
 } catch(err) {
   logger.fatal({ err }, "Startup failed: could not load or save 1H history");

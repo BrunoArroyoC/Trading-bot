@@ -6,6 +6,7 @@ import { asc } from "drizzle-orm";
 import { db } from "../../src/db/index.ts";
 import { candles } from "../../src/db/schema.ts";
 import { getTheLast512Bars1H } from "../../src/layers/alpaca/alpacaConnection.ts";
+import { BufferCandle } from "../../src/layers/model/candleBuffer.ts";
 
 // Task 1.10: real Postgres (Testcontainers) + fake Alpaca REST (MSW).
 
@@ -62,10 +63,14 @@ afterAll(async () => {
 
 describe("getTheLast512Bars1H", () => {
   test("saves the last 512 closed hours and skips the open one", async () => {
-    await getTheLast512Bars1H(alpaca, TICKER);
+    const bufferCandle = new BufferCandle();
+    await getTheLast512Bars1H(alpaca, TICKER, bufferCandle);
 
     const saved = await db.select().from(candles).orderBy(asc(candles.openTime));
     expect(saved).toHaveLength(512);
+    // The buffer (task 2.1) is loaded with the same 512 candles.
+    expect(bufferCandle.bufferCandle).toHaveLength(512);
+    expect(bufferCandle.bufferCandle.at(-1)?.openTime).toEqual(saved.at(-1)?.openTime);
     // Oldest = 512 hours before the current hour; newest = the hour that just closed (10:00).
     expect(saved[0]?.openTime).toEqual(new Date(currentHourStart.getTime() - 512 * HOUR_MS));
     expect(saved.at(-1)?.openTime).toEqual(new Date(currentHourStart.getTime() - HOUR_MS));
@@ -80,19 +85,23 @@ describe("getTheLast512Bars1H", () => {
   });
 
   test("running it again updates the same rows instead of duplicating them", async () => {
-    await getTheLast512Bars1H(alpaca, TICKER);
-    await getTheLast512Bars1H(alpaca, TICKER);
+    const bufferCandle = new BufferCandle();
+    await getTheLast512Bars1H(alpaca, TICKER, bufferCandle);
+    await getTheLast512Bars1H(alpaca, TICKER, bufferCandle);
 
     const saved = await db.select().from(candles);
     expect(saved).toHaveLength(512);
+    expect(bufferCandle.bufferCandle).toHaveLength(512);
   });
 
   test("throws and saves nothing when Alpaca returns fewer than 512 closed bars", async () => {
     barsToReturn = () => fakeBars(new Date(currentHourStart.getTime() - 100 * HOUR_MS), currentHourStart);
 
-    await expect(getTheLast512Bars1H(alpaca, TICKER)).rejects.toThrow("Expected 512 1H bars");
+    const bufferCandle = new BufferCandle();
+    await expect(getTheLast512Bars1H(alpaca, TICKER, bufferCandle)).rejects.toThrow("Expected 512 1H bars");
 
     const saved = await db.select().from(candles);
     expect(saved).toHaveLength(0);
+    expect(bufferCandle.bufferCandle).toHaveLength(0);
   });
 });

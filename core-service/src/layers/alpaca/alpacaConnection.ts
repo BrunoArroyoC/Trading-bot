@@ -5,6 +5,7 @@ import { extractTimeLastClosedCandle, upsertCandle} from "./candleRespository.ts
 import { Cron } from "croner";
 import type { HourCandleManager } from "../model/1HourCandleManager.ts";
 import { circuitBreaker, ConsecutiveBreaker, ExponentialBackoff, handleAll, retry, wrap } from "cockatiel";
+import type { BufferCandle } from "../model/candleBuffer.ts";
 
 
 const retryPolicy = retry(handleAll, { maxAttempts: 4, backoff: new ExponentialBackoff({ initialDelay: 10_000, maxDelay: 60_000 }) });
@@ -25,7 +26,7 @@ export async function startConnectionAlpaca(alpaca: Alpaca) {
 const HISTORY_BARS = 512;
 const HOUR_MS = 60 * 60 * 1000;
 
-export async function getTheLast512Bars1H(alpaca: Alpaca, ticker: string) {
+export async function getTheLast512Bars1H(alpaca: Alpaca, ticker: string, bufferCandle: BufferCandle) {
   const currentHourStart = new Date();
   currentHourStart.setUTCMinutes(0, 0, 0);
   const dataRetry = await retryBreaker.execute( async () => {
@@ -45,6 +46,7 @@ export async function getTheLast512Bars1H(alpaca: Alpaca, ticker: string) {
     throw new Error(`Expected 512 1H bars for ${ticker}, got ${candles.length}`);
   }
   const { inserted, updated } = await upsertCandle(candles);
+  candles.map((candle) => bufferCandle.pushToBuffer(candle));
   logger.info({ ticker, inserted, updated, latestClosed: candles.at(-1)?.openTime }, "Saved 1H history");
 
 
@@ -86,7 +88,12 @@ export async function cronGetHourCandle(alpaca: Alpaca, ticker: string, event: H
         return candles;
       });
 
+      if (!auxCandle[0]) {
+        return;
+      }
+
       const result = await upsertCandle(auxCandle);
+      event.notificationToBuffer(auxCandle);
       event.notificactionHourCandle({ ticker, inserted: result.inserted,updated: result.updated });
       logger.info({ ticker, inserted: result.inserted,updated: result.updated }, "Save 1Hour candle");
     } catch (err) {
