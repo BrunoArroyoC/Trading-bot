@@ -14,6 +14,7 @@
         "pg": "^8.23.1",
         "pino": "^10.4.0",
         "pino-http": "^11.0.0",
+        "trading-signals": "^8.3.0",
         "zod": "^4.6.7",
       },
       "devDependencies": {
@@ -1351,6 +1352,8 @@
     "toidentifier": ["toidentifier@1.0.1", "", {}, "sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA=="],
 
     "tough-cookie": ["tough-cookie@6.0.2", "", { "dependencies": { "tldts": "^7.0.5" } }, "sha512-exgYmnmL/sJpR3upZfXG5PoatXQii55xAiXGXzY+sROLZ/Y+SLcp9PgJNI9Vz37HpQ74WvDcLT8eqm+kV3FzrA=="],
+
+    "trading-signals": ["trading-signals@8.3.0", "", {}, "sha512-C2DigYcuaBmTfLJ4KkCgM6TPZwKoFYz9Tyj2BWnTgMVMb3u21udF80oGPhqGyyd57RPJnrst3pc0ShA09XVUAw=="],
 
     "ts-api-utils": ["ts-api-utils@2.5.0", "", { "peerDependencies": { "typescript": ">=4.8.4" } }, "sha512-OJ/ibxhPlqrMM0UiNHJ/0CKQkoKF243/AEmplt3qpRgkW8VG7IfOS41h7V8TjITqdByHzrjcS/2si+y4lIh8NA=="],
 

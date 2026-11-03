@@ -5,11 +5,13 @@ import express, { type Express,  } from 'express';
 import { pinoHttp } from "pino-http";
 import { HourCandleManager } from "./src/layers/model/1HourCandleManager.ts";
 import { BufferCandle } from "./src/layers/model/candleBuffer.ts";
+import { IndicatorsOp } from "./src/layers/indicatorMaths/indicatorsOpe.ts";
 
 const app: Express = express();
 
 const eventClosedCandle = new HourCandleManager();
 const bufferCandle: BufferCandle = new BufferCandle();
+const indicatorOp: IndicatorsOp = new IndicatorsOp();
 
 
 const TICKER = ["BTC/USD"];
@@ -23,8 +25,10 @@ const alpaca = new Alpaca({
   paper: true,
 });
 
-eventClosedCandle.waitForClosedCandle(({ticker, inserted, updated}) => {
+eventClosedCandle.waitForClosedCandle(({ ticker, inserted, updated }) => {
   logger.info({ ticker, inserted, updated }, "Candle Close and reciving");
+  const result = indicatorOp.flowIndicator(ticker, bufferCandle.getCandles(ticker));
+  logger.info({ ticker, indicators: result }, "Indicators calculated");
 });
 
 eventClosedCandle.addingToBUffer((candles) => {
