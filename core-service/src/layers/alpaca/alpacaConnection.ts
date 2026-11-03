@@ -1,6 +1,6 @@
 import { Alpaca, timeFrame, TimeFrameUnit} from "@alpacahq/alpaca-trade-api";
 import { logger } from "../../logger.ts";
-import { mapperCandle} from "./model/candleZod.ts";
+import { mapperCandle, type Candle} from "./model/candleZod.ts";
 import { extractTimeLastClosedCandle, upsertCandle} from "./candleRespository.ts";
 import { Cron } from "croner";
 import type { HourCandleManager } from "../model/1HourCandleManager.ts";
@@ -26,13 +26,13 @@ export async function startConnectionAlpaca(alpaca: Alpaca) {
 const HISTORY_BARS = 512;
 const HOUR_MS = 60 * 60 * 1000;
 
-export async function getTheLast512Bars1H(alpaca: Alpaca, ticker: string, bufferCandle: BufferCandle) {
+export async function getTheLast512Bars1H(alpaca: Alpaca, ticker: string[], bufferCandle: BufferCandle) {
   const currentHourStart = new Date();
   currentHourStart.setUTCMinutes(0, 0, 0);
   const dataRetry = await retryBreaker.execute( async () => {
     const bars = await alpaca.marketData.getCryptoBars({
       loc: "us-1",
-      symbols: [ticker],
+      symbols: ticker,
       timeframe: timeFrame(1, TimeFrameUnit.Hour),
       // A few extra hours in case Alpaca has an hour with no bar.
       start: new Date(currentHourStart.getTime() - (HISTORY_BARS + 8) * HOUR_MS),
@@ -40,64 +40,64 @@ export async function getTheLast512Bars1H(alpaca: Alpaca, ticker: string, buffer
     return bars;
   });
 
-  const closedBars = (dataRetry[ticker] ?? []).filter((bar) => bar.timestamp < currentHourStart).slice(-HISTORY_BARS);
-  const candles = closedBars.map((bar) => mapperCandle(bar, ticker));
-  if (candles.length < 512) {
-    throw new Error(`Expected 512 1H bars for ${ticker}, got ${candles.length}`);
+
+  const mapOfTicker: Map<string, Candle[]> = new Map();
+  ticker.forEach((tick) => mapOfTicker.set(tick, (dataRetry[tick] ?? [])
+      .filter((bar) => bar.timestamp < currentHourStart)
+      .slice(-HISTORY_BARS)
+      .map((bar) => mapperCandle(bar, tick))));
+
+  mapOfTicker.forEach((candles, tick) => {
+    if (candles.length < 512) throw new Error(`Expected 512 1H bars for ${tick}, got ${candles.length}`);
+  });
+
+  for (const [tick, candles] of mapOfTicker) {
+    const { inserted, updated } = await upsertCandle(candles);
+    candles.forEach((candle) => bufferCandle.pushToBuffer(candle));
+    logger.info({ tick, inserted, updated, lastestClosed: candles.at(-1)?.openTime }, "Save 1H history");
   }
-  const { inserted, updated } = await upsertCandle(candles);
-  candles.map((candle) => bufferCandle.pushToBuffer(candle));
-  logger.info({ ticker, inserted, updated, latestClosed: candles.at(-1)?.openTime }, "Saved 1H history");
-
-
 }
 
 
 
-export async function cronGetHourCandle(alpaca: Alpaca, ticker: string, event: HourCandleManager) {
-
+export async function cronGetHourCandle(alpaca: Alpaca, ticker: string[], event: HourCandleManager) {
   new Cron('0 1 * * * * *', { timezone: "UTC", protect: true }, async () => {
-    try {
-
-      const newestOpenTime = await extractTimeLastClosedCandle(ticker);
-      const newOpenTime = newestOpenTime[0];
-      newOpenTime?.openTime?.setUTCMinutes(0, 0, 0);
-
-      if (!newOpenTime?.openTime) {
-        logger.warn({ ticker }, "No saved candle to start from");
-        return;
-      }
-      const lastSaved = newOpenTime.openTime;
-
-      const currentHourStart = new Date();
-      currentHourStart.setUTCMinutes(0, 0, 0);
-      const auxCandle = await retryBreaker.execute( async () => {
-        const bars = await alpaca.marketData.getCryptoBars({
-          loc: "us-1",
-          symbols: [ticker],
-          timeframe: timeFrame(1, TimeFrameUnit.Hour),
-          start: lastSaved,
-          //start: new Date(lastSaved.getTime() - (3 + 8) * HOUR_MS),  //To try later in testing,
-        });
-        const closedBars = (bars[ticker] ?? []).filter((bar) => bar.timestamp < currentHourStart);
-        const candles = closedBars.map((bar) => mapperCandle(bar, ticker));
-        const newest = candles.at(-1);
-        if (!newest || newest.openTime.getTime() !== currentHourStart.getTime() - HOUR_MS) {
-          throw new Error("Closed hour not published yet");
+    for (const tick of ticker) {
+      try {
+        const auxOpentimeList = await extractTimeLastClosedCandle(tick);
+        if (!auxOpentimeList[0]?.openTime) {
+          logger.warn({ tick }, "No saved candle to start from");
+          continue;
         }
-        return candles;
-      });
+        const auxOpenTime = auxOpentimeList[0].openTime;
+        auxOpenTime.setUTCMinutes(0, 0, 0);
+        const lastSaved = auxOpenTime;
+        const currentHourStart = new Date();
+        currentHourStart.setUTCMinutes(0, 0, 0);
 
-      if (!auxCandle[0]) {
-        return;
+        const auxCandle = await retryBreaker.execute(async () => {
+          const bars = await alpaca.marketData.getCryptoBars({
+            loc: "us-1",
+            symbols: tick,
+            timeframe: timeFrame(1, TimeFrameUnit.Hour),
+            start: lastSaved,
+            //start: new Date(lastSaved.getTime() - (3 + 8) * HOUR_MS),  //To try later in testing,
+          });
+          const closedBars = (bars[tick] ?? []).filter((bar) => bar.timestamp < currentHourStart);
+          const candles = closedBars.map((bar) => mapperCandle(bar, tick));
+          const newest = candles.at(-1);
+          if (!newest || newest.openTime.getTime() !== currentHourStart.getTime() - HOUR_MS) {
+            throw new Error("Closed hour not published yet");
+          }
+          return candles;
+        });
+        const result = await upsertCandle(auxCandle);
+        event.notificationToBuffer(auxCandle);
+        event.notificactionHourCandle({ ticker: tick, inserted: result.inserted, updated: result.updated });
+        logger.info({ tick, inserted: result.inserted, updated: result.updated }, "Save 1Hour candle");
+      }catch (err) {
+        logger.error({ err, tick }, "Save 1Hour candle failed");
       }
-
-      const result = await upsertCandle(auxCandle);
-      event.notificationToBuffer(auxCandle);
-      event.notificactionHourCandle({ ticker, inserted: result.inserted,updated: result.updated });
-      logger.info({ ticker, inserted: result.inserted,updated: result.updated }, "Save 1Hour candle");
-    } catch (err) {
-      logger.error({ err, ticker }, "Save 1Hour candle failed");
     }
   });
 }

@@ -2,15 +2,17 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { BufferCandle } from "../../src/layers/model/candleBuffer.ts";
 import type { Candle } from "../../src/layers/alpaca/model/candleZod.ts";
 
-// Task 2.1: the buffer grows by one candle per hour and never exceeds 512.
+// Task 2.1: the buffer grows by one candle per hour and never exceeds 512, per ticker.
 
+const TICKER = "BTC/USD";
+const SECOND_TICKER = "ETH/USD";
 const HOUR_MS = 60 * 60 * 1000;
 const FIRST_HOUR = new Date("2026-10-10T00:00:00.000Z").getTime();
 
 // Candle number `hour` = FIRST_HOUR + hour hours.
-function candleAt(hour: number, close = "100"): Candle {
+function candleAt(hour: number, close = "100", ticker = TICKER): Candle {
   return {
-    ticker: "BTC/USD",
+    ticker,
     timeframe: "1Hour",
     openTime: new Date(FIRST_HOUR + hour * HOUR_MS),
     open: "100",
@@ -21,8 +23,8 @@ function candleAt(hour: number, close = "100"): Candle {
   };
 }
 
-function openTimes(bufferCandle: BufferCandle) {
-  return bufferCandle.bufferCandle.map((candle) => candle.openTime.getTime());
+function openTimes(candles: Candle[]) {
+  return candles.map((candle) => candle.openTime.getTime());
 }
 
 let bufferCandle: BufferCandle;
@@ -35,44 +37,49 @@ beforeEach(() => {
 
 describe("BufferCandle.pushToBuffer", () => {
   test("is loaded with 512 candles from oldest to newest", () => {
-    expect(bufferCandle.bufferCandle).toHaveLength(512);
-    expect(bufferCandle.bufferCandle[0]?.openTime).toEqual(candleAt(0).openTime);
-    expect(bufferCandle.bufferCandle.at(-1)?.openTime).toEqual(candleAt(511).openTime);
+    const candles = bufferCandle.getCandles(TICKER);
+    expect(candles).toHaveLength(512);
+    expect(candles[0]?.openTime).toEqual(candleAt(0).openTime);
+    expect(candles.at(-1)?.openTime).toEqual(candleAt(511).openTime);
   });
 
   test("a new hour goes in at the end and the oldest one goes out", () => {
     bufferCandle.pushToBuffer(candleAt(512));
 
-    expect(bufferCandle.bufferCandle).toHaveLength(512);
-    expect(bufferCandle.bufferCandle[0]?.openTime).toEqual(candleAt(1).openTime);
-    expect(bufferCandle.bufferCandle.at(-1)?.openTime).toEqual(candleAt(512).openTime);
+    const candles = bufferCandle.getCandles(TICKER);
+    expect(candles).toHaveLength(512);
+    expect(candles[0]?.openTime).toEqual(candleAt(1).openTime);
+    expect(candles.at(-1)?.openTime).toEqual(candleAt(512).openTime);
   });
 
   test("a normal cron run (lastSaved again + the new hour) adds exactly one hour", () => {
     // auxCandle starts at lastSaved, so its first candle is already in the buffer.
     [candleAt(511), candleAt(512)].forEach((candle) => bufferCandle.pushToBuffer(candle));
 
-    expect(bufferCandle.bufferCandle).toHaveLength(512);
-    expect(bufferCandle.bufferCandle.at(-1)?.openTime).toEqual(candleAt(512).openTime);
+    const candles = bufferCandle.getCandles(TICKER);
+    expect(candles).toHaveLength(512);
+    expect(candles.at(-1)?.openTime).toEqual(candleAt(512).openTime);
     // No hour appears twice.
-    expect(new Set(openTimes(bufferCandle)).size).toBe(512);
+    expect(new Set(openTimes(candles)).size).toBe(512);
   });
 
   test("the same hour twice is replaced, not duplicated", () => {
     bufferCandle.pushToBuffer(candleAt(511, "200"));
 
-    expect(bufferCandle.bufferCandle).toHaveLength(512);
-    expect(bufferCandle.bufferCandle.at(-1)?.close).toBe("200");
-    expect(bufferCandle.bufferCandle.at(-2)?.openTime).toEqual(candleAt(510).openTime);
+    const candles = bufferCandle.getCandles(TICKER);
+    expect(candles).toHaveLength(512);
+    expect(candles.at(-1)?.close).toBe("200");
+    expect(candles.at(-2)?.openTime).toEqual(candleAt(510).openTime);
   });
 
   test("an older hour is ignored", () => {
-    const before = openTimes(bufferCandle);
+    const before = openTimes(bufferCandle.getCandles(TICKER));
 
     bufferCandle.pushToBuffer(candleAt(100, "999"));
 
-    expect(openTimes(bufferCandle)).toEqual(before);
-    expect(bufferCandle.bufferCandle.find((candle) => candle.close === "999")).toBeUndefined();
+    const candles = bufferCandle.getCandles(TICKER);
+    expect(openTimes(candles)).toEqual(before);
+    expect(candles.find((candle) => candle.close === "999")).toBeUndefined();
   });
 
   test("after a gap, every missed hour goes in and it still never exceeds 512", () => {
@@ -81,16 +88,18 @@ describe("BufferCandle.pushToBuffer", () => {
       bufferCandle.pushToBuffer(candle),
     );
 
-    expect(bufferCandle.bufferCandle).toHaveLength(512);
-    expect(bufferCandle.bufferCandle[0]?.openTime).toEqual(candleAt(3).openTime);
-    expect(bufferCandle.bufferCandle.at(-1)?.openTime).toEqual(candleAt(514).openTime);
+    const candles = bufferCandle.getCandles(TICKER);
+    expect(candles).toHaveLength(512);
+    expect(candles[0]?.openTime).toEqual(candleAt(3).openTime);
+    expect(candles.at(-1)?.openTime).toEqual(candleAt(514).openTime);
   });
 
   test("a day of hourly runs keeps it at 512, always ending at the newest hour", () => {
     for (let hour = 512; hour < 512 + 24; hour++) {
       [candleAt(hour - 1), candleAt(hour)].forEach((candle) => bufferCandle.pushToBuffer(candle));
-      expect(bufferCandle.bufferCandle).toHaveLength(512);
-      expect(bufferCandle.bufferCandle.at(-1)?.openTime).toEqual(candleAt(hour).openTime);
+      const candles = bufferCandle.getCandles(TICKER);
+      expect(candles).toHaveLength(512);
+      expect(candles.at(-1)?.openTime).toEqual(candleAt(hour).openTime);
     }
   });
 
@@ -99,6 +108,43 @@ describe("BufferCandle.pushToBuffer", () => {
 
     emptyBuffer.pushToBuffer(candleAt(0));
 
-    expect(emptyBuffer.bufferCandle).toHaveLength(1);
+    expect(emptyBuffer.getCandles(TICKER)).toHaveLength(1);
+  });
+
+  test("a ticker with no candles returns an empty list", () => {
+    expect(bufferCandle.getCandles("SOL/USD")).toEqual([]);
+  });
+});
+
+describe("BufferCandle with two tickers", () => {
+  beforeEach(() => {
+    // Startup loads BTC first (beforeEach above), then ETH for the same hours.
+    for (let hour = 0; hour < 512; hour++) bufferCandle.pushToBuffer(candleAt(hour, "100", SECOND_TICKER));
+  });
+
+  test("each ticker keeps its own 512 candles", () => {
+    expect(bufferCandle.getCandles(TICKER)).toHaveLength(512);
+    expect(bufferCandle.getCandles(SECOND_TICKER)).toHaveLength(512);
+    expect(bufferCandle.getCandles(SECOND_TICKER).every((candle) => candle.ticker === SECOND_TICKER)).toBe(true);
+  });
+
+  test("the same hour on another ticker doesn't replace this ticker's candle", () => {
+    bufferCandle.pushToBuffer(candleAt(511, "300", SECOND_TICKER));
+
+    expect(bufferCandle.getCandles(TICKER).at(-1)?.close).toBe("100");
+    expect(bufferCandle.getCandles(SECOND_TICKER).at(-1)?.close).toBe("300");
+  });
+
+  test("an hourly cron run for both grows each by exactly one hour", () => {
+    for (const ticker of [TICKER, SECOND_TICKER]) {
+      [candleAt(511, "100", ticker), candleAt(512, "100", ticker)].forEach((candle) => bufferCandle.pushToBuffer(candle));
+    }
+
+    for (const ticker of [TICKER, SECOND_TICKER]) {
+      const candles = bufferCandle.getCandles(ticker);
+      expect(candles).toHaveLength(512);
+      expect(candles.at(-1)?.openTime).toEqual(candleAt(512).openTime);
+      expect(new Set(openTimes(candles)).size).toBe(512);
+    }
   });
 });

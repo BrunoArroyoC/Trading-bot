@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Alpaca } from "@alpacahq/alpaca-trade-api";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "../../src/db/index.ts";
 import { candles } from "../../src/db/schema.ts";
 import { getTheLast512Bars1H } from "../../src/layers/alpaca/alpacaConnection.ts";
@@ -11,6 +11,7 @@ import { BufferCandle } from "../../src/layers/model/candleBuffer.ts";
 // Task 1.10: real Postgres (Testcontainers) + fake Alpaca REST (MSW).
 
 const TICKER = "BTC/USD";
+const SECOND_TICKER = "ETH/USD";
 const HOUR_MS = 60 * 60 * 1000;
 // Fixed "now" so the hour math never depends on when the test runs.
 const NOW = new Date("2026-10-31T11:31:00.000Z");
@@ -27,13 +28,17 @@ function fakeBars(start: Date, end: Date) {
 }
 
 let lastRequestUrl: URL | undefined;
-let barsToReturn: (start: Date) => ReturnType<typeof fakeBars>;
+// What the fake Alpaca returns for each requested symbol.
+let barsToReturn: (start: Date, symbol: string) => ReturnType<typeof fakeBars>;
 
 const server = setupServer(
   http.get("https://data.alpaca.markets/v1beta3/crypto/:loc/bars", ({ request }) => {
     lastRequestUrl = new URL(request.url);
     const start = new Date(lastRequestUrl.searchParams.get("start")!);
-    return HttpResponse.json({ bars: { [TICKER]: barsToReturn(start) }, next_page_token: null });
+    // Accepts "BTC/USD,ETH/USD" or a repeated symbols= parameter.
+    const symbols = lastRequestUrl.searchParams.getAll("symbols").flatMap((s) => s.split(","));
+    const bars = Object.fromEntries(symbols.map((symbol) => [symbol, barsToReturn(start, symbol)]));
+    return HttpResponse.json({ bars, next_page_token: null });
   }),
 );
 
@@ -64,13 +69,13 @@ afterAll(async () => {
 describe("getTheLast512Bars1H", () => {
   test("saves the last 512 closed hours and skips the open one", async () => {
     const bufferCandle = new BufferCandle();
-    await getTheLast512Bars1H(alpaca, TICKER, bufferCandle);
+    await getTheLast512Bars1H(alpaca, [TICKER], bufferCandle);
 
     const saved = await db.select().from(candles).orderBy(asc(candles.openTime));
     expect(saved).toHaveLength(512);
     // The buffer (task 2.1) is loaded with the same 512 candles.
-    expect(bufferCandle.bufferCandle).toHaveLength(512);
-    expect(bufferCandle.bufferCandle.at(-1)?.openTime).toEqual(saved.at(-1)?.openTime);
+    expect(bufferCandle.getCandles(TICKER)).toHaveLength(512);
+    expect(bufferCandle.getCandles(TICKER).at(-1)?.openTime).toEqual(saved.at(-1)?.openTime);
     // Oldest = 512 hours before the current hour; newest = the hour that just closed (10:00).
     expect(saved[0]?.openTime).toEqual(new Date(currentHourStart.getTime() - 512 * HOUR_MS));
     expect(saved.at(-1)?.openTime).toEqual(new Date(currentHourStart.getTime() - HOUR_MS));
@@ -86,22 +91,49 @@ describe("getTheLast512Bars1H", () => {
 
   test("running it again updates the same rows instead of duplicating them", async () => {
     const bufferCandle = new BufferCandle();
-    await getTheLast512Bars1H(alpaca, TICKER, bufferCandle);
-    await getTheLast512Bars1H(alpaca, TICKER, bufferCandle);
+    await getTheLast512Bars1H(alpaca, [TICKER], bufferCandle);
+    await getTheLast512Bars1H(alpaca, [TICKER], bufferCandle);
 
     const saved = await db.select().from(candles);
     expect(saved).toHaveLength(512);
-    expect(bufferCandle.bufferCandle).toHaveLength(512);
+    expect(bufferCandle.getCandles(TICKER)).toHaveLength(512);
   });
 
   test("throws and saves nothing when Alpaca returns fewer than 512 closed bars", async () => {
     barsToReturn = () => fakeBars(new Date(currentHourStart.getTime() - 100 * HOUR_MS), currentHourStart);
 
     const bufferCandle = new BufferCandle();
-    await expect(getTheLast512Bars1H(alpaca, TICKER, bufferCandle)).rejects.toThrow("Expected 512 1H bars");
+    await expect(getTheLast512Bars1H(alpaca, [TICKER], bufferCandle)).rejects.toThrow("Expected 512 1H bars");
 
     const saved = await db.select().from(candles);
     expect(saved).toHaveLength(0);
-    expect(bufferCandle.bufferCandle).toHaveLength(0);
+    expect(bufferCandle.getCandles(TICKER)).toHaveLength(0);
+  });
+
+  test("two tickers: one request, 512 saved for each, separate buffers", async () => {
+    const bufferCandle = new BufferCandle();
+    await getTheLast512Bars1H(alpaca, [TICKER, SECOND_TICKER], bufferCandle);
+
+    const btc = await db.select().from(candles).where(eq(candles.ticker, TICKER));
+    const eth = await db.select().from(candles).where(eq(candles.ticker, SECOND_TICKER));
+    expect(btc).toHaveLength(512);
+    expect(eth).toHaveLength(512);
+    // Same hours for both tickers, and neither one pushed the other out of the buffer.
+    expect(bufferCandle.getCandles(TICKER)).toHaveLength(512);
+    expect(bufferCandle.getCandles(SECOND_TICKER)).toHaveLength(512);
+    expect(bufferCandle.getCandles(SECOND_TICKER).every((candle) => candle.ticker === SECOND_TICKER)).toBe(true);
+  });
+
+  test("two tickers: if Alpaca leaves one out, startup fails naming it and saves nothing", async () => {
+    barsToReturn = (start, symbol) => (symbol === SECOND_TICKER ? [] : fakeBars(start, currentHourStart));
+
+    const bufferCandle = new BufferCandle();
+    await expect(getTheLast512Bars1H(alpaca, [TICKER, SECOND_TICKER], bufferCandle)).rejects.toThrow(
+      `Expected 512 1H bars for ${SECOND_TICKER}, got 0`,
+    );
+
+    // The check runs for every ticker before any upsert, so BTC isn't half-saved either.
+    const saved = await db.select().from(candles);
+    expect(saved).toHaveLength(0);
   });
 });

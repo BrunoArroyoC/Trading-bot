@@ -12,7 +12,7 @@ const eventClosedCandle = new HourCandleManager();
 const bufferCandle: BufferCandle = new BufferCandle();
 
 
-const TICKER = "BTC/USD";
+const TICKER = ["BTC/USD"];
 
 // Prints one JSON log line per request.
 app.use(pinoHttp({ logger }));
