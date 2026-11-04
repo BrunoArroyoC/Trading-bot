@@ -1,0 +1,43 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a93a4868-8bb2-4ffe-8138-07ff3c3eda98",
+  "prevIds": [
+    "f3cd109c-6b4c-4f7e-b823-e999387d6272"
+  ],
+  "footprints": [
+    {
+      "statementType": "recreate_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "snapshots",
+        "snapshots_ticker_close_idx"
+      ],
+      "writes": [
+        "s|idx|public.snapshots_ticker_close_idx",
+        "n|idx|public.snapshots_ticker_close_idx",
+        "e|idx|public.snapshots_ticker_close_idx",
+        "n|rel|public.snapshots_ticker_close_idx"
+      ],
+      "reads": [
+        "n|tbl|public.snapshots",
+        "n|sch|public",
+        "n|col|public.snapshots.ticker",
+        "n|col|public.snapshots.candle_close_time"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "f7a5b9c93fe9164e"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"public\",\"snapshots_ticker_close_idx\"]",
+      "set": {
+        "isUnique": true
+      }
+    }
+  ]
+}

@@ -51,15 +51,3 @@ export class IndicatorsOp {
 
   }
 }
-
-export type ListIndicator = {
-  ticker: string,
-  rsi: number,
-  macd: number,
-  atr: number,
-  ema1: number,
-  ema2: number,
-  ema3: number,
-  sma: number,
-  bollinger: number,
-}

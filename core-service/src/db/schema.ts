@@ -9,6 +9,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -44,7 +45,8 @@ export const snapshots = pgTable(
     degraded: boolean('degraded').notNull().default(false),
     createdAt: ts('created_at').notNull().defaultNow(),
   },
-  (t) => [index('snapshots_ticker_close_idx').on(t.ticker, t.candleCloseTime)],
+  // Unique: one snapshot per ticker per hour (task 2.5); the insert's ON CONFLICT relies on it.
+  (t) => [uniqueIndex('snapshots_ticker_close_idx').on(t.ticker, t.candleCloseTime)],
 );
 
 export const orders = pgTable(
