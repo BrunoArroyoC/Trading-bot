@@ -1,0 +1,26 @@
+{
+  "snapshotId": "0b9e4d7c-3f21-4a6b-8c5d-e1f2a3b4c5d6",
+  "schemaVersion": 1,
+  "ticker": "BTC/USD",
+  "candleCloseTime": "2026-11-03T18:00:00.000Z",
+  "candle": { "open": 77020.5, "high": 77410.0, "low": 76880.25, "close": 77250.75, "volume": 92.41 },
+  "indicators": {
+    "rsi": 61.4,
+    "macd": { "histogram": 137.37, "macd": 23.37, "signal": -114.0 },
+    "atr": 396.83,
+    "ema1": 77132.56,
+    "ema2": 77311.87,
+    "ema3": 78507.74,
+    "sma": 89.09,
+    "bollinger": { "lower": 76258.66, "middle": 76924.11, "upper": 77589.55 }
+  },
+  "forecast": null,
+  "sentiment": {
+    "score": 0.1,
+    "confidence": 0.4,
+    "keyDrivers": ["No major news"],
+    "generatedAt": "2026-11-03T15:00:00.000Z",
+    "stale": true
+  },
+  "degraded": true
+}

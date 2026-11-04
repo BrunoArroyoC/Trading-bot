@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "7f3c2a1e-9b4d-4c8e-a6f1-2d5b8e9c0a13",
+  "ticker": "BTC/USD",
+  "action": "BUY",
+  "confidence": 0.68,
+  "reasoning": "Price above EMA 20, MACD histogram turned positive, RSI neutral at 61; forecast and sentiment agree.",
+  "validUntil": "2026-11-03T18:10:00.000Z"
+}
