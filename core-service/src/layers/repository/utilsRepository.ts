@@ -1,6 +1,8 @@
+import { desc } from "drizzle-orm";
 import { db } from "../../db/index.ts";
 import { snapshots } from "../../db/schema.ts";
 import type { MarketSnapshot } from "../model/snapshotZod.ts";
+import { logger } from "../../logger.ts";
 
 
 // snapshot; the first one stays because Jev may already have it, and the caller must not publish again.
@@ -19,4 +21,15 @@ export async function buildSnap(ticker: string, candleClosedTime: Date, degraded
     .returning({ id: snapshots.id });
 
   return { inserted: result.length === 1 };
+}
+
+//Get the last snapshot.
+export async function latestSnapShot() {
+  try {
+    const result = await db.select().from(snapshots).orderBy(desc(snapshots.createdAt)).limit(1);
+    if (!result[0]) throw new Error("No data");
+    return result;
+  } catch (err) {
+    logger.error(err, "Problems");
+  }
 }
